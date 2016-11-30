@@ -34,4 +34,7 @@ app = webapp2.WSGIApplication([
     ('/', MainHandler),
 	('/tarea1', Tarea1Handler),
 	('/tarea2', Tarea2Handler),
+	('/saludo', Tarea1SaludoHandler),
+	('/greeting', Tarea1GreetingHandler),
+	('/agurra', Tarea1AgurraHandler),
 ], debug=True)
