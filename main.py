@@ -18,23 +18,208 @@ import webapp2
 
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-        self.response.write('<a href="/tarea1">Tarea 1</a><br/>'
-							'<a href="/tarea2">Tarea 2</a><br/>'
-		)
+        self.response.write('<h1>EjerciciosDSSW - Victor Ramirez</h1><br/><br/>'
+                            '<a href="/tarea1">Tarea 1</a><br/>'
+                            '<a href="/registro">Tarea 2</a><br/>'
+                            )
 		
 class Tarea1Handler(webapp2.RequestHandler):
 	def get(self):
-		self.response.write('Tarea 1')
+		self.response.write('<H1>Tarea 1</H1><br/><br/>'
+                                    '<a href="/saludo?lang=SP">Saludo</a><br/>'
+                                    '<a href="/saludo?lang=EN">Greeting</a><br/>'
+                                    '<a href="/saludo?lang=EU">Agurra</a><br/>'
+                                    )
+class Tarea1SaludoHandler(webapp2.RequestHandler):
+	def get(self):
+                lang = self.request.get("lang")
+                self.response.write('''
+                                    <html>
+                                        <head>
+                                            <style type="text/css">
+                                                H1 {border-width: 1; border: solid;}
+                                                body {text-align: center}
+                                            </style>
+                                        </head>
+                                        <body>
+                                    ''')
+                if lang == 'SP':
+                    self.response.write('<H1>Hola Mundo</H1><br/>')
+                elif lang == 'EN':
+                    self.response.write('<H1>Hello World</H1><br/>')
+                elif lang == 'EU':
+                    self.response.write('<H1>Kaixo Mundoa</H1><br/>')
+        
+                self.response.write('''
+                                            <img src="https://media.giphy.com/media/3o6gb3qeuP96u4m5cQ/giphy-tumblr.gif" /><br/>
+                                            <H1></H1>
+                                        </body>
+                                    </html>
+                                    ''')
+
+
 		
 class Tarea2Handler(webapp2.RequestHandler):
 	def get(self):
-		self.response.write('Tarea 2')
+            lang = self.request.get("lang")
+            tarea = "Tarea"
+            rellene = "Rellene los campos por favor"
+            usuario = "Nombre de usuario"
+            tunombre = "Tu nombre"
+            contrasena = "Contrase&ntilde;a"
+            tucontrasena = "Tu contrase&ntilde;a"
+            repecontrasena = "Repetir contrase&ntilde;a"
+            repelacontrasena = "Repite la contrase&ntilde;a"
+            email = "Correo Electr&oacute;nico"
+            tuemail = "Tu correo electr&oacute;nico"
+            enviar = "Enviar"
+            nombError = "Nombre Incorrecto"
+            passError = "Contrase\u00F1a Incorrecta"
+            passmiss = "Contrase\u00F1a No Coincide"
+            emailError = "Email Incorrecto"
+            if lang == 'EN':
+                tarea = "Task"
+                rellene = "Please, complete the information below"
+                usuario = "Username"
+                tunombre = "Your name"
+                contrasena = "Password"
+                tucontrasena = "Your password"
+                repecontrasena = "Repeat password"
+                repelacontrasena = "Repeat the password"
+                email = "Email"
+                tuemail = "Your Email"
+                enviar = "Submit"
+                nombError = "Wrong Name"
+                passError = "Wrong Password"
+                passmiss = "Password Mismatch"
+                emailError = "Wrong Email"
+	    self.response.write('''
+<html>
+  <head>
+    <link type="text/css" rel="stylesheet" href="http://siconeso.appspot.com/stylesheets/main.css" />
+    <title>Introduzca sus datos:</title>
+    <style type="text/css">
+      .label {text-align: right}
+      .error {color: red}
+      h6 {float: right;
+          margin-top: 0px;}
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script>
+    $(document)
+        .on('click', 'form input[type=submit]', function(e) {
+            $('span').text("");
+            var isValid = true;
+            if ($('#username').val()==''){
+                $('#error_username').text("''' + nombError + '''!");
+                isValid = false;
+            }
+            if ($('#password').val()==''){
+                $('#error_password').text("''' + passError + '''!");
+                isValid = false;
+            }
+            if ($('#verify').val()==''){
+                $('#error_verify').text("''' + passError + '''!");
+                isValid = false;
+            }
+            if ($('#password').val()!='' && $('#verify').val()!='' && $('#password').val() != $('#verify').val()){
+                $('#error_verify').text("''' + passmiss + '''!");
+                isValid = false;
+            }
+            if( !validateEmail($('#email').val())) {
+                $('#error_email').text("''' + emailError + '''!");
+                isValid = false;
+            }
+            if(!isValid) {
+              e.preventDefault(); //prevent the default action
+            }
+        });
+
+        function validateEmail(email) {
+          var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+          return regex.test(email);
+        }
+    </script>
+  </head>
+ 
+  <body>
+  <h6><a href="/registro">Espa&ntilde;ol</a> | <a href="/registro?lang=EN">English</a></h6>
+  <h1>DSSW-''' + tarea + ''' 2</h1>
+    <h2>''' + rellene + ''':</h2>
+    <form method="post" target="my_iframe">
+      <table>
+        <tr>
+          <td class="label">
+            ''' + usuario + '''
+          </td>
+          <td>
+            <input type="text" name="username" id="username" value="" placeholder="''' + tunombre + ''' ...">
+          </td>
+          <td class="error">
+            <span id="error_username"></span>
+          </td>
+        </tr>
+ 
+        <tr>
+          <td class="label">
+            ''' + contrasena + '''
+          </td>
+          <td>
+            <input type="password" name="password" id="password" value="" placeholder="''' + tucontrasena + ''' ..." autocomplete="off">
+          </td>
+          <td class="error">
+            <span id="error_password"></span>
+          </td>
+             
+          </td>
+        </tr>
+ 
+        <tr>
+          <td class="label">
+            ''' + repecontrasena + '''
+          </td>
+          <td>
+            <input type="password" name="verify" id="verify" value="" placeholder="''' + repelacontrasena + ''' ...">
+          </td>
+          <td class="error">
+            <span id="error_verify"></span>
+          </td>
+        </tr>
+ 
+        <tr>
+          <td class="label">
+            ''' + email + '''
+          </td>
+          <td>
+            <input type="text" name="email" id="email" value=""  placeholder="''' + tuemail + ''' ...">
+          </td>
+          <td class="error">
+            <span id="error_email"></span>
+          </td>
+        </tr>
+      </table>
+ 
+      <input type="submit" value="''' + enviar + '''">
+    </form>
+    <iframe name="my_iframe"  width="600" height="300" frameBorder="0" ></iframe>
+  </body>
+ 
+</html>
+''')
+        def post(self):
+            lang = self.request.get("lang")
+            hola = "Hola "
+            datos = "Tus datos son correctos"
+            if lang == 'EN':
+                hola = "Hello "
+                datos = "Your information is correct."
+            self.response.write('''<link type="text/css" rel="stylesheet" href="http://siconeso.appspot.com/stylesheets/main.css" />
+                                <span class="label">''' + hola + self.request.get("username") + '''</span><br/>
+                                <span class="label">''' + datos + '''</span><br/>''')
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
 	('/tarea1', Tarea1Handler),
-	('/tarea2', Tarea2Handler),
+	('/registro', Tarea2Handler),
 	('/saludo', Tarea1SaludoHandler),
-	('/greeting', Tarea1GreetingHandler),
-	('/agurra', Tarea1AgurraHandler),
 ], debug=True)
