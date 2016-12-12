@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: cp1252 -*-
 #
 # Copyright 2007 Google Inc.
 #
@@ -15,6 +16,7 @@
 # limitations under the License.
 #
 import webapp2
+import re
 
 class MainHandler(webapp2.RequestHandler):
     def get(self):
@@ -57,7 +59,9 @@ class Tarea1SaludoHandler(webapp2.RequestHandler):
                                     </html>
                                     ''')
 
-
+ER_USUARIO = re.compile(r"^[a-zA-z0-9]{3,20}")
+ER_CONTRASENA = re.compile(r"^.{6,20}")
+ER_CORREO = re.compile(r"^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$")
 		
 class Tarea2Handler(webapp2.RequestHandler):
 	def get(self):
@@ -201,21 +205,50 @@ class Tarea2Handler(webapp2.RequestHandler):
  
       <input type="submit" value="''' + enviar + '''">
     </form>
-    <iframe name="my_iframe"  width="600" height="300" frameBorder="0" ></iframe>
+    <iframe name="my_iframe"  width="100%" height="300" frameBorder="0" ></iframe>
   </body>
  
 </html>
 ''')
         def post(self):
+            mensaje = ""
+            username = self.request.get("username")
+            password = self.request.get("password")
+            verify = self.request.get("verify")
+            email = self.request.get("email")
             lang = self.request.get("lang")
             hola = "Hola "
             datos = "Tus datos son correctos"
+            nombreVacio = "El nombre debe tener entre 3 y 20 caracteres (entre d&iacute;gitos y/o letras)"
+            noCoinciden = "Las contrase&ntilde;as no coinciden"
+            passCorto = "La contrase&ntilde;a debe tener una longitud m&iacute;nima de 6 caracteres."
+            correoIncorrecto = "El correo no tiene el formato correcto"
             if lang == 'EN':
                 hola = "Hello "
                 datos = "Your information is correct."
-            self.response.write('''<link type="text/css" rel="stylesheet" href="http://siconeso.appspot.com/stylesheets/main.css" />
+                noCoinciden = "Password Mismatch"
+                nombreVacio = "Username must have between 3 and 20 characters (digits and/or letters)."
+                passCorto = "Password must have at least 6 characters"
+                correoIncorrecto = "Incorrect email format"
+            if not ER_USUARIO.match(username):
+                mensaje += '<span class="error" id="error_email">' + nombreVacio + '</span><br/>'
+            if not ER_CONTRASENA.match(password):
+                mensaje += '<span class="error" id="error_email">' + passCorto + '</span><br/>'
+            if password <> verify :
+                mensaje += '<span class="error" id="error_email">' + noCoinciden + '</span><br/>'
+            if not ER_CORREO.match(email):
+                mensaje += '<span class="error" id="error_email">' + correoIncorrecto + '</span><br/>'
+
+            if mensaje == "" :
+                self.response.write('''<link type="text/css" rel="stylesheet" href="http://siconeso.appspot.com/stylesheets/main.css" />
                                 <span class="label">''' + hola + self.request.get("username") + '''</span><br/>
                                 <span class="label">''' + datos + '''</span><br/>''')
+            else:
+                self.response.write('''<link type="text/css" rel="stylesheet" href="http://siconeso.appspot.com/stylesheets/main.css" />
+                                    <style>
+                                        .error {color: red}
+                                    </style>
+                                    ''' + mensaje )
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
