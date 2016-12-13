@@ -17,12 +17,37 @@
 #
 import webapp2
 import re
+import cgi
+import urllib
+
+from google.appengine.api import images
+from google.appengine.api import users
+from google.appengine.ext import ndb
+
+
+class usuario(ndb.Model):
+    nombre = ndb.StringProperty(required=True)
+    password = ndb.StringProperty(required=True)
+    email = ndb.StringProperty(required=True)
+    created = ndb.DateTimeProperty(auto_now_add=True)
+    image = ndb.BlobProperty()
+
+class Image(webapp2.RequestHandler):
+    def get(self):
+        greeting_key = ndb.Key(urlsafe=self.request.get('img_id'))
+        greeting = greeting_key.get()
+        if greeting.image:
+            self.response.headers['Content-Type'] = 'image/png'
+            self.response.out.write(greeting.image)
+        else:
+            self.response.out.write('No image')
 
 class MainHandler(webapp2.RequestHandler):
     def get(self):
         self.response.write('<h1>EjerciciosDSSW - Victor Ramirez</h1><br/><br/>'
                             '<a href="/tarea1">Tarea 1</a><br/>'
                             '<a href="/registro">Tarea 2</a><br/>'
+                            '<a href="/verusuarios">Tarea 3</a><br/>'
                             )
 		
 class Tarea1Handler(webapp2.RequestHandler):
@@ -32,6 +57,47 @@ class Tarea1Handler(webapp2.RequestHandler):
                                     '<a href="/saludo?lang=EN">Greeting</a><br/>'
                                     '<a href="/saludo?lang=EU">Agurra</a><br/>'
                                     )
+
+class Tarea3Handler(webapp2.RequestHandler):
+	def get(self):
+                usuarios = usuario.query()
+                self.response.write('''<style>
+                                            table {
+                                                    border-collapse: collapse;
+                                                    font
+                                                }
+
+                                                table, th, td {
+                                                    border: 1px solid black;
+                                                    padding: 3px;
+                                                }
+                                                th {
+                                                    background-color: gray;
+                                                    color: white;
+                                                }
+                                        </style>
+                                        
+                                        <H1>Usuarios Registrados</H1><a href="/registro">Registrarse</a><br/><br/><br/>
+                                        <table>
+                                            <tr>
+                                                <th>Usuario</th>
+                                                <th>Correo</th>
+                                                <th>Fecha de registro</th>
+                                                <th>Imagen</th>
+                                            </tr>''')
+                for acct in usuarios.fetch():
+                    self.response.write('''
+                                            <tr>
+                                                <td>''' + acct.nombre + '''</td>
+                                                <td>''' + acct.email + '''</td>
+                                                <td>''' + str(acct.created) + '''</td>
+                                                <td>''')
+                    self.response.write('<div><img src="/img?img_id=%s"></img>' %
+                                    acct.key.urlsafe())
+                    self.response.write('''</div></td></tr>''')
+                self.response.write('''</table>''')
+
+            
 class Tarea1SaludoHandler(webapp2.RequestHandler):
 	def get(self):
                 lang = self.request.get("lang")
@@ -81,6 +147,8 @@ class Tarea2Handler(webapp2.RequestHandler):
             passError = "Contrase\u00F1a Incorrecta"
             passmiss = "Contrase\u00F1a No Coincide"
             emailError = "Email Incorrecto"
+            imagen = "Imagen"
+            tuimagen = "Selecciona una imagen"
             if lang == 'EN':
                 tarea = "Task"
                 rellene = "Please, complete the information below"
@@ -97,6 +165,8 @@ class Tarea2Handler(webapp2.RequestHandler):
                 passError = "Wrong Password"
                 passmiss = "Password Mismatch"
                 emailError = "Wrong Email"
+                imagen = "Image"
+                tuimagen = "Choose an image"
 	    self.response.write('''
 <html>
   <head>
@@ -135,7 +205,7 @@ class Tarea2Handler(webapp2.RequestHandler):
                 isValid = false;
             }
             if(!isValid) {
-              e.preventDefault(); //prevent the default action
+              //e.preventDefault(); //prevent the default action
             }
         });
 
@@ -147,10 +217,11 @@ class Tarea2Handler(webapp2.RequestHandler):
   </head>
  
   <body>
+  <h5><a href="/verusuarios">Usuarios Registrados</a></h5>
   <h6><a href="/registro">Espa&ntilde;ol</a> | <a href="/registro?lang=EN">English</a></h6>
   <h1>DSSW-''' + tarea + ''' 2</h1>
     <h2>''' + rellene + ''':</h2>
-    <form method="post" target="my_iframe">
+    <form method="post" enctype="multipart/form-data" target="my_iframe">
       <table>
         <tr>
           <td class="label">
@@ -201,6 +272,17 @@ class Tarea2Handler(webapp2.RequestHandler):
             <span id="error_email"></span>
           </td>
         </tr>
+        <tr>
+          <td class="label">
+            ''' + imagen + '''
+          </td>
+          <td>
+            <input type="file" name="imagen" id="imagen" value=""  placeholder="''' + tuimagen + ''' ...">
+          </td>
+          <td class="error">
+            <span id="error_email"></span>
+          </td>
+        </tr>
       </table>
  
       <input type="submit" value="''' + enviar + '''">
@@ -217,12 +299,14 @@ class Tarea2Handler(webapp2.RequestHandler):
             verify = self.request.get("verify")
             email = self.request.get("email")
             lang = self.request.get("lang")
+            avatar = self.request.get('imagen')
             hola = "Hola "
             datos = "Tus datos son correctos"
             nombreVacio = "El nombre debe tener entre 3 y 20 caracteres (entre d&iacute;gitos y/o letras)"
             noCoinciden = "Las contrase&ntilde;as no coinciden"
             passCorto = "La contrase&ntilde;a debe tener una longitud m&iacute;nima de 6 caracteres."
             correoIncorrecto = "El correo no tiene el formato correcto"
+            usuarioRegistrado = "Este usuario no esta disponible, cambie el nombre de usuario o correo."
             if lang == 'EN':
                 hola = "Hello "
                 datos = "Your information is correct."
@@ -230,6 +314,7 @@ class Tarea2Handler(webapp2.RequestHandler):
                 nombreVacio = "Username must have between 3 and 20 characters (digits and/or letters)."
                 passCorto = "Password must have at least 6 characters"
                 correoIncorrecto = "Incorrect email format"
+                usuarioRegistrado = "User not available, change username or email."
             if not ER_USUARIO.match(username):
                 mensaje += '<span class="error" id="error_email">' + nombreVacio + '</span><br/>'
             if not ER_CONTRASENA.match(password):
@@ -240,7 +325,24 @@ class Tarea2Handler(webapp2.RequestHandler):
                 mensaje += '<span class="error" id="error_email">' + correoIncorrecto + '</span><br/>'
 
             if mensaje == "" :
-                self.response.write('''<link type="text/css" rel="stylesheet" href="http://siconeso.appspot.com/stylesheets/main.css" />
+                usuarios = usuario.query(ndb.OR(usuario.nombre == username, usuario.email == email))
+                if usuarios.count() > 0 :
+                    mensaje= '<span class="error" id="error_email">' + usuarioRegistrado + '</span><br/>'
+                    self.response.write('''<link type="text/css" rel="stylesheet" href="http://siconeso.appspot.com/stylesheets/main.css" />
+                                    <style>
+                                        .error {color: red}
+                                    </style>
+                                    ''' + mensaje )
+                else:
+                    avatar = images.resize(avatar, 32, 32)
+                    datosLog = usuario()
+                    datosLog.nombre = username
+                    datosLog.password = password
+                    datosLog.email = email
+                    if (img_format == 'jpeg' or 'jpg' or 'gif' or 'png' or 'bmp' or 'tiff' or 'ico' or 'webp'):
+                        datosLog.imagen = avatar
+                    datosLog.put()
+                    self.response.write('''<link type="text/css" rel="stylesheet" href="http://siconeso.appspot.com/stylesheets/main.css" />
                                 <span class="label">''' + hola + self.request.get("username") + '''</span><br/>
                                 <span class="label">''' + datos + '''</span><br/>''')
             else:
@@ -255,4 +357,6 @@ app = webapp2.WSGIApplication([
 	('/tarea1', Tarea1Handler),
 	('/registro', Tarea2Handler),
 	('/saludo', Tarea1SaludoHandler),
+        ('/verusuarios', Tarea3Handler),
+        ('/img', Image),
 ], debug=True)
