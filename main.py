@@ -21,7 +21,6 @@ import cgi
 import urllib
 
 from google.appengine.api import images
-from google.appengine.api import users
 from google.appengine.ext import ndb
 
 
@@ -37,6 +36,11 @@ class Image(webapp2.RequestHandler):
         greeting_key = ndb.Key(urlsafe=self.request.get('img_id'))
         greeting = greeting_key.get()
         if greeting.image:
+            #img = images.Image(greeting.image)
+            #img.resize(width=80, height=100)
+            #img.im_feeling_lucky()
+            #thumbnail = img.execute_transforms(output_encoding=images.JPEG)
+
             self.response.headers['Content-Type'] = 'image/png'
             self.response.out.write(greeting.image)
         else:
@@ -277,7 +281,7 @@ class Tarea2Handler(webapp2.RequestHandler):
             ''' + imagen + '''
           </td>
           <td>
-            <input type="file" name="imagen" id="imagen" value=""  placeholder="''' + tuimagen + ''' ...">
+            <input type="file" name="imagen" id="imagen" value="" >
           </td>
           <td class="error">
             <span id="error_email"></span>
@@ -300,6 +304,7 @@ class Tarea2Handler(webapp2.RequestHandler):
             email = self.request.get("email")
             lang = self.request.get("lang")
             avatar = self.request.get('imagen')
+            avatarName = self.request.POST.multi['imagen']
             hola = "Hola "
             datos = "Tus datos son correctos"
             nombreVacio = "El nombre debe tener entre 3 y 20 caracteres (entre d&iacute;gitos y/o letras)"
@@ -334,13 +339,15 @@ class Tarea2Handler(webapp2.RequestHandler):
                                     </style>
                                     ''' + mensaje )
                 else:
-                    avatar = images.resize(avatar, 32, 32)
                     datosLog = usuario()
                     datosLog.nombre = username
                     datosLog.password = password
                     datosLog.email = email
-                    if (img_format == 'jpeg' or 'jpg' or 'gif' or 'png' or 'bmp' or 'tiff' or 'ico' or 'webp'):
-                        datosLog.imagen = avatar
+                    if avatarName != "":
+                        avatar = images.resize(avatar, 80, 100)
+                        datosLog.image = avatar
+                    #if (img_format == 'jpeg' or 'jpg' or 'gif' or 'png' or 'bmp' or 'tiff' or 'ico' or 'webp'):
+                    
                     datosLog.put()
                     self.response.write('''<link type="text/css" rel="stylesheet" href="http://siconeso.appspot.com/stylesheets/main.css" />
                                 <span class="label">''' + hola + self.request.get("username") + '''</span><br/>
