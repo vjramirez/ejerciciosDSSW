@@ -19,6 +19,7 @@ import webapp2
 import re
 import cgi
 import urllib
+import hashlib
 
 from google.appengine.api import images
 from google.appengine.ext import ndb
@@ -96,9 +97,12 @@ class Tarea3Handler(webapp2.RequestHandler):
                                                 <td>''' + acct.email + '''</td>
                                                 <td>''' + str(acct.created) + '''</td>
                                                 <td>''')
-                    self.response.write('<div><img src="/img?img_id=%s"></img>' %
+                    if acct.image:
+                        self.response.write('<div><img src="/img?img_id=%s"></img></div>' %
                                     acct.key.urlsafe())
-                    self.response.write('''</div></td></tr>''')
+                    else:
+                        self.response.write('''Sin Imagen''')
+                    self.response.write('''</td></tr>''')
                 self.response.write('''</table>''')
 
             
@@ -341,7 +345,7 @@ class Tarea2Handler(webapp2.RequestHandler):
                 else:
                     datosLog = usuario()
                     datosLog.nombre = username
-                    datosLog.password = password
+                    datosLog.password = hashlib.md5(password).hexdigest()
                     datosLog.email = email
                     if avatarName != "":
                         avatar = images.resize(avatar, 80, 100)
