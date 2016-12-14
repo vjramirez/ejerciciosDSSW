@@ -133,7 +133,7 @@ class Tarea1SaludoHandler(webapp2.RequestHandler):
                                     </html>
                                     ''')
 
-ER_USUARIO = re.compile(r"^[a-zA-z0-9]{3,20}")
+ER_USUARIO = re.compile(r"^[a-zA-Z0-9]{3,20}")
 ER_CONTRASENA = re.compile(r"^.{6,20}")
 ER_CORREO = re.compile(r"^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$")
 		
