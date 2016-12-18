@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: cp1252 -*-
+# -*- coding: utf-8 -*-
 #
 # Copyright 2007 Google Inc.
 #
@@ -20,6 +20,8 @@ import re
 import cgi
 import urllib
 import hashlib
+import json
+import re
 
 from google.appengine.api import images
 from google.appengine.ext import ndb
@@ -53,6 +55,8 @@ class MainHandler(webapp2.RequestHandler):
                             '<a href="/tarea1">Tarea 1</a><br/>'
                             '<a href="/registro">Tarea 2</a><br/>'
                             '<a href="/verusuarios">Tarea 3</a><br/>'
+                            '<a href="/registro">Tarea 4</a><br/>'
+                            '<a href="/datos">Tarea 5</a><br/>'
                             )
 		
 class Tarea1Handler(webapp2.RequestHandler):
@@ -133,9 +137,23 @@ class Tarea1SaludoHandler(webapp2.RequestHandler):
                                     </html>
                                     ''')
 
+
 ER_USUARIO = re.compile(r"^[a-zA-Z0-9]{3,20}")
 ER_CONTRASENA = re.compile(r"^.{6,20}")
 ER_CORREO = re.compile(r"^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$")
+
+class EmailHandler(webapp2.RequestHandler):
+    def get(self):
+                email = self.request.get("email")
+                if not ER_CORREO.match(email):
+                    self.response.out.write('''<div style="background-color: white;"><b>Email incorrecto</b></div> @@@@@ $('#email').val('')''')
+                else:
+                    usuarios = usuario.query(usuario.email == email)
+                    if usuarios.count() == 0 :
+                        self.response.out.write('''<div style="background-color: white; color: green;"><b>Email correcto</b></div> @@@@@''')
+                    else:
+                        self.response.out.write('''<div style="background-color: white; color: blue;"><b>Email ya utilizado</b></div> @@@@@ $('#email').val('')''')
+
 		
 class Tarea2Handler(webapp2.RequestHandler):
 	def get(self):
@@ -188,39 +206,66 @@ class Tarea2Handler(webapp2.RequestHandler):
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <script>
-    $(document)
-        .on('click', 'form input[type=submit]', function(e) {
-            $('span').text("");
-            var isValid = true;
-            if ($('#username').val()==''){
-                $('#error_username').text("''' + nombError + '''!");
-                isValid = false;
-            }
-            if ($('#password').val()==''){
-                $('#error_password').text("''' + passError + '''!");
-                isValid = false;
-            }
-            if ($('#verify').val()==''){
-                $('#error_verify').text("''' + passError + '''!");
-                isValid = false;
-            }
-            if ($('#password').val()!='' && $('#verify').val()!='' && $('#password').val() != $('#verify').val()){
-                $('#error_verify').text("''' + passmiss + '''!");
-                isValid = false;
-            }
-            if( !validateEmail($('#email').val())) {
-                $('#error_email').text("''' + emailError + '''!");
-                isValid = false;
-            }
-            if(!isValid) {
-              //e.preventDefault(); //prevent the default action
-            }
-        });
+        $(document)
+            .on('click', 'form input[type=submit]', function(e) {
+                $('span').text("");
+                var isValid = true;
+                if ($('#username').val()==''){
+                    $('#error_username').text("''' + nombError + '''!");
+                    isValid = false;
+                }
+                if ($('#password').val()==''){
+                    $('#error_password').text("''' + passError + '''!");
+                    isValid = false;
+                }
+                if ($('#verify').val()==''){
+                    $('#error_verify').text("''' + passError + '''!");
+                    isValid = false;
+                }
+                if ($('#password').val()!='' && $('#verify').val()!='' && $('#password').val() != $('#verify').val()){
+                    $('#error_verify').text("''' + passmiss + '''!");
+                    isValid = false;
+                }
+                if( !validateEmail($('#email').val())) {
+                    $('#error_email').text("''' + emailError + '''!");
+                    isValid = false;
+                }
+                if(!isValid) {
+                  //e.preventDefault(); //prevent the default action
+                }
+            });
 
         function validateEmail(email) {
           var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
           return regex.test(email);
         }
+
+
+        window.onload = function() {
+            $("#email").change(function() {
+                validarEmail($(this).val())
+            });
+        };
+
+
+        function validarEmail(f){    
+        $.ajax("/valemail?email="+f, 
+        { "type": "get",   // usualmente post o get
+           "success": function(result) {
+                // respuesta en un span
+                var vecResult = result.split('@@@@@');
+                $("#error_email").html(vecResult[0]);
+                eval(vecResult[1]);
+                },
+            "beforeSend": function() {
+                $("#error_email").html("Consultando...");
+            },
+           "error": function(result) {
+            console.error("Se ha producido un error: ", result);},
+            "async": true,})
+        };
+
+
     </script>
   </head>
  
@@ -288,7 +333,7 @@ class Tarea2Handler(webapp2.RequestHandler):
             <input type="file" name="imagen" id="imagen" value="" >
           </td>
           <td class="error">
-            <span id="error_email"></span>
+            <span id="error_imagen"></span>
           </td>
         </tr>
       </table>
@@ -363,11 +408,256 @@ class Tarea2Handler(webapp2.RequestHandler):
                                     </style>
                                     ''' + mensaje )
 
+class Tarea5Handler(webapp2.RequestHandler):
+    def get(self):
+                lang = self.request.get("lang")
+                self.response.write('''
+                                    <!DOCTYPE html>
+                                    <html>
+                                        <head>
+                                            <title>DSSW-Tarea 5</title>
+                                            <meta name="viewport" content="initial-scale=1.0">
+                                            <meta charset="utf-8">
+                                            <script src="https://apis.google.com/js/platform.js" async defer></script>
+                                            <meta name="google-signin-client_id" content="960747220119-kvks81kdt3s1cl2hhs0372h7q9onjpqg.apps.googleusercontent.com">
+                                            <style>
+                                              /* Always set the map height explicitly to define the size of the div
+                                               * element that contains the map. */
+                                              #map {
+                                                height: 500px;
+                                                width: 800px;
+                                              }
+                                              /* Optional: Makes the sample page fill the window. */
+                                              html, body {
+                                                height: 100%;
+                                                margin: 0;
+                                                padding: 0;
+                                              }
+                                            </style>
+                                            <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+                                            <script>
+
+                                                function statusChangeCallback(response) {
+
+                                                    if (response.status === 'connected') {
+                                                      // Logged into your app and Facebook.
+                                                      testAPI();
+                                                    } 
+                                                    else {
+                                                      // The person is not logged into Facebook, so we're not sure if
+                                                      // they are logged into this app or not.
+                                                      //document.getElementById('log').innerHTML = 'Please log ' +
+                                                      //  'into Facebook.';
+                                                    }
+                                                  }
+                                                function logout() {
+                                                    FB.logout(function(response) {
+                                                       // Person is now logged out
+                                                       $("#logout").hide();
+                                                        $("#logout").html("");
+                                                        $("#login").show();
+                                                    });
+                                                }
+
+                                                function checkLoginState() {
+                                                    FB.getLoginStatus(function(response) {
+                                                      statusChangeCallback(response);
+                                                    });
+                                                  }
+
+                                                var profile;
+                                                window.onload = function() {
+                                                    $("#consultar").click(function() {
+                                                        if ($("#dir").val() != ""){
+                                                            $("#dir").css("background-color","white");
+                                                            buscarDir($("#dir").val())
+                                                        }
+                                                        else {
+                                                            $("#dir").css("background-color","red");
+                                                        }
+                                                        
+                                                    });
+                                                    $("body").show();
+                                                };
+
+                                                function buscarDir(f){
+                                                    f = f.replace(/á/g,"a").replace(/é/g,"e").replace(/í/g,"i").replace(/ó/g,"o").replace(/ú/g,"u");
+                                                    $.ajax("/datos?dir="+f, 
+                                                    { "type": "post",   // usualmente post o get
+                                                       "success": function(result) {
+                                                            // respuesta en un span
+                                                            $("#loading").hide();
+                                                            var vecResult = result.split('@@@@@');
+                                                            $("#my_div").html(vecResult[0]);
+                                                            eval(vecResult[1]);
+                                                            },
+                                                        "beforeSend": function() {
+                                                            $("#loading").show();
+                                                            $("#my_div").html("");
+                                                            $("#map").html("");
+                                                        },
+                                                       "error": function(result) {
+                                                        console.error("Se ha producido un error: ", result);},
+                                                        "async": true,})
+                                                };
+
+                                                function onSignIn(googleUser) {
+                                                // Si el login es correcto ...
+                                                  var profile = googleUser.getBasicProfile();
+                                                  $("#login").hide();
+                                                  $("#logout").html("<div style='float:right;'><img src='"+ profile.getImageUrl() + "'></div><div style='float:right; padding:10px;'><b>"+ profile.getName() +
+                                                                    "</b><br/>" + profile.getEmail() + "<br/>" +
+                                                                    "<a href='#' onclick='signOut();'>Salir</a></div>");
+                                                  /*alert('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
+                                                  alert('Name: ' + profile.getName());
+                                                  alert('Image URL: ' + profile.getImageUrl());
+                                                  alert('Email: ' + profile.getEmail());*/
+                                                  $("#logout").show();
+                                                }
+
+                                                function signOut() {
+                                                    var auth2 = gapi.auth2.getAuthInstance();
+                                                    auth2.signOut().then(function () {
+                                                        $("#logout").hide();
+                                                        $("#logout").html("");
+                                                        $("#login").show();
+                                                    });
+                                                }
+
+
+                                            </script>
+                                          </head>
+                                          <body style="display:none;">
+                                            <div id="fb-root"></div>
+                                            <script>
+                                                window.fbAsyncInit = function() {
+                                                    FB.init({
+                                                      appId      : '279232835812962',
+                                                      xfbml      : true,
+                                                      version    : 'v2.8'
+                                                    });
+
+                                                    FB.getLoginStatus(function(response) {
+                                                        statusChangeCallback(response);
+                                                    });
+                                                  };
+
+                                                (function(d, s, id) {
+                                                    $("#fbutton").html("Acceder");
+                                                  var js, fjs = d.getElementsByTagName(s)[0];
+                                                  if (d.getElementById(id)) return;
+                                                  js = d.createElement(s); js.id = id;
+                                                  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.8";
+                                                  fjs.parentNode.insertBefore(js, fjs);
+                                                }(document, 'script', 'facebook-jssdk'));
+
+
+                                                function testAPI() {
+                                                    var urlImg = "";
+                                                    FB.api('/me/picture', function(response) {
+                                                        urlImg = response.data.url;
+                                                    });
+                                                    FB.api('/me', { fields: 'name, email' }, function(response) {
+                                                        $("#login").hide();
+                                                        //$("#logout").html('Thanks for logging in, ' + response.name + '!' + '<br/><button onclick="javascript:logout();">Logout from Facebook</button>');
+                                                        $("#logout").html("<div style='float:right;'><img src='" + urlImg + "'></div><div style='float:right; padding:10px;'><b>"+ response.name +
+                                                                    "</b><br/>"+ response.email +"<br/>" +
+                                                                    "<button onclick='javascript:logout();'>Salir de Facebook</button></div>");
+                                                        $("#logout").show();
+
+                                                    });
+                                                  }
+
+                                            </script>
+
+
+                                            <div id="login" style="float:right; margin:10px;">
+                                                <div style="float:right;"
+                                                    class="g-signin2"
+                                                    data-onsuccess="onSignIn"
+                                                    data-onfailure="onSignInFailure">
+                                                </div>
+                                                <fb:login-button id="fbutton" style="float:right; margin-right:10px; margin-top:5px;" size="large" scope="public_profile,email" onlogin="checkLoginState();">Acceder</fb:login-button>
+                                            </div>
+                                            <div id="logout" style="float:right; width:350px; height:100px;">
+                                            </div>
+                                    
+                                            
+                                            <h1>DSSW-Tarea 5: Servicios Web</h1>
+                                            <h4>Escriba una dirección, barrio, ciudad, provincia o país para consultar su ubicación en un mapa.</h4>
+                                            <input type="text" name="dir" id="dir" />
+                                            <input type="button" value="Consultar" id="consultar" />
+                                            <div id="loading" width="100%" height="300" style="display:none">
+                                                <img src='http://img.ffffound.com/static-data/assets/6/77443320c6509d6b500e288695ee953502ecbd6d_m.gif' />
+                                            </div>
+                                            <div id="my_div" width="100%" height="300" ></div>
+                                            <div id="map" ></div>
+                                            <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBwbeY6D6EAdwNgPo0cvHqrJzRzcIzv4MI"></script>
+
+
+                                            
+                                        <body>
+                                    </html>
+                                    ''')
+    def post(self):
+                serviceurl = 'http://maps.googleapis.com/maps/api/geocode/json?'
+                address=self.request.get('dir')
+                url = serviceurl + urllib.urlencode({'address': address})
+                uh = urllib.urlopen(url)
+                data = uh.read()
+                #js = json.loads(unicode(str(data).decode('utf-8')))
+                js = json.loads(str(data))
+                matriz = js['results']
+                if len(matriz)>0:
+                    direccion = matriz[0]['formatted_address']
+                    self.response.write('''<br/>Resultado: ''' + direccion + '''</br> ''')
+                    self.response.write('''Latitud: ''' + str(matriz[0]['geometry']['location']['lat']) + '''</br> ''')
+                    self.response.write('''Longitud: ''' + str(matriz[0]['geometry']['location']['lng']) + '''</br> ''')
+                    self.response.write('''@@@@@
+                                                var myLatLng = {lat: ''' + str(matriz[0]['geometry']['location']['lat']) + ''', lng: ''' + str(matriz[0]['geometry']['location']['lng']) +'''};
+                                                var map = new google.maps.Map(document.getElementById('map'), {
+                                                  zoom: 14,
+                                                  center: myLatLng
+                                                });
+                                                var marker = new google.maps.Marker({
+                                                  position: myLatLng,
+                                                  map: map,
+                                                  title: ' ''' + direccion + ''' '
+                                                });
+
+                                                var contentString = '<div id="content">'+
+                                                                    '<div id="siteNotice">'+
+                                                                    '</div>'+
+                                                                    '<h1 id="firstHeading" class="firstHeading">''' + direccion + '''</h1>'+
+                                                                    '<div id="bodyContent">'+
+                                                                    '<p>Latitud: ''' + str(matriz[0]['geometry']['location']['lat']) + '''</br>'+
+                                                                    'Longitud: ''' + str(matriz[0]['geometry']['location']['lng']) + '''</p>'+
+                                                                    '</div>'+
+                                                                    '</div>';
+
+                                                var infowindow = new google.maps.InfoWindow({
+                                                  content: contentString
+                                                });
+
+
+                                                marker.addListener('click', function() {
+                                                  infowindow.open(map, marker);
+                                                });
+
+
+    ''')
+
+                else:
+                    self.response.write('''<br/>No hay resultados.''')
+
+
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
 	('/tarea1', Tarea1Handler),
 	('/registro', Tarea2Handler),
 	('/saludo', Tarea1SaludoHandler),
-        ('/verusuarios', Tarea3Handler),
-        ('/img', Image),
+    ('/verusuarios', Tarea3Handler),
+    ('/img', Image),
+    ('/valemail', EmailHandler),
+    ('/datos', Tarea5Handler),
 ], debug=True)
