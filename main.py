@@ -22,10 +22,20 @@ import urllib
 import hashlib
 import json
 import re
+from webapp2_extras import sessions
+import session_module
 
 from google.appengine.api import images
 from google.appengine.ext import ndb
+from google.appengine.ext import blobstore
+from google.appengine.ext.webapp import blobstore_handlers
 
+#This is needed to configure the session secret key
+#Runs first in the whole application
+myconfig_dict = {}
+myconfig_dict['webapp2_extras.sessions'] = {
+    'secret_key': 'my-super-secret-key-somemorearbitarythingstosay',
+}
 
 class usuario(ndb.Model):
     nombre = ndb.StringProperty(required=True)
@@ -33,6 +43,11 @@ class usuario(ndb.Model):
     email = ndb.StringProperty(required=True)
     created = ndb.DateTimeProperty(auto_now_add=True)
     image = ndb.BlobProperty()
+
+class Imagen(ndb.Model):
+	email = ndb.StringProperty()
+	public = ndb.BooleanProperty()
+	blob_key = ndb.BlobKeyProperty()
 
 class Image(webapp2.RequestHandler):
     def get(self):
@@ -49,15 +64,96 @@ class Image(webapp2.RequestHandler):
         else:
             self.response.out.write('No image')
 
+#class MainHandler(webapp2.RequestHandler):
+#    def get(self):
+#        self.response.write('<h1>EjerciciosDSSW - Victor Ramirez</h1><br/><br/>'
+#        					'<div style="float:left; width: 300px; height:100%;">'
+#                            '<a href="/tarea1">Tarea 1</a><br/>'
+#                            '<a href="/registro">Tarea 2</a><br/>'
+#                            '<a href="/verusuarios">Tarea 3</a><br/>'
+#                            '<a href="/registro">Tarea 4</a><br/>'
+#                            '<a href="/datos">Tarea 5</a><br/>'
+#                            '<a href="/sesion">Tarea 6</a><br/>'
+#                            '</div>'
+#                            '<div style="width: 100%; height:100%;"><iframe  name="contenido" frameBorder="1" ></iframe></div>'
+#                            )
+
+
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-        self.response.write('<h1>EjerciciosDSSW - Victor Ramirez</h1><br/><br/>'
-                            '<a href="/tarea1">Tarea 1</a><br/>'
-                            '<a href="/registro">Tarea 2</a><br/>'
-                            '<a href="/verusuarios">Tarea 3</a><br/>'
-                            '<a href="/registro">Tarea 4</a><br/>'
-                            '<a href="/datos">Tarea 5</a><br/>'
-                            )
+        self.response.write('''
+        					<!DOCTYPE html>
+							<html>
+							<head>
+							<style>
+							div.container {
+							    width: 100%;
+							    border: 1px solid gray;
+							}
+
+							header, footer {
+							    padding: 1em;
+							    color: white;
+							    background-color: black;
+							    clear: left;
+							    text-align: center;
+							}
+
+							nav {
+							    float: left;
+							    max-width: 160px;
+							    margin: 0;
+							    padding: 1em;
+							}
+
+							nav ul {
+							    list-style-type: none;
+							    padding: 0;
+							}
+							   
+							nav ul a {
+							    text-decoration: none;
+							}
+
+							article {
+							    margin-left: 170px;
+							    border-left: 1px solid gray;
+							    padding: 1em;
+							    overflow: hidden;
+							}
+							</style>
+							</head>
+							<body>
+
+							<div class="container">
+
+							<header>
+							   <h1>EjerciciosDSSW</h1>
+							</header>
+							  
+							<nav>
+							  <ul>
+							    <li><a href="/tarea1" target="contenido">Tarea 1</a></li>
+							    <li><a href="/registro" target="contenido">Tarea 2</a></li>
+							    <li><a href="/verusuarios" target="contenido">Tarea 3</a></li>
+							    <li><a href="/registro" target="contenido">Tarea 4</a></li>
+							    <li><a href="/datos" target="contenido">Tarea 5</a></li>
+							    <li><a href="/sesion" target="contenido">Tarea 6</a></li>
+							  </ul>
+							</nav>
+
+							<article>
+							  <iframe  width="100%" height="730" name="contenido" frameBorder="0" ></iframe>
+							</article>
+
+							<footer>Victor Ramirez</footer>
+
+							</div>
+
+							</body>
+							</html>
+
+                            ''')
 		
 class Tarea1Handler(webapp2.RequestHandler):
 	def get(self):
@@ -650,6 +746,252 @@ class Tarea5Handler(webapp2.RequestHandler):
                 else:
                     self.response.write('''<br/>No hay resultados.''')
 
+class Tarea6Handler(session_module.BaseSessionHandler):
+	def get(self):
+		#if self.session.get('usuarioLogado'): 
+		#	self.response.out.write('Existe una sesion activa ')
+		#	counter = self.session.get('usuarioLogado')
+		#	self.session['usuarioLogado'] = counter + 1
+		#	self.response.out.write('Counter = ' + str(self.session.get('counter')))
+		#	self.response.write('''<br/><a href="/logout">Logout</a></br> ''')
+  		#else:
+
+			#self.response.out.write('Sesion nueva')
+			#self.session['counter'] = 1
+			#self.response.out.write('Counter = ' + str(self.session.get('counter')))
+		self.response.out.write('''
+								<iframe  width="100%" height="150" name="login" frameBorder="0" src="/login" ></iframe>
+								<iframe  width="100%" height="500" name="login" frameBorder="0" src="/download" ></iframe>
+								''')
+			
+
+class LogoutHandler(session_module.BaseSessionHandler):
+	def get(self):
+		del self.session['usuarioLogado'] 
+		del self.session['emailLogado'] 
+		self.response.write('''<script>parent.location.href=parent.location.href</script> ''')
+		# eliminará el elemento counter de la sesión.
+
+
+class LoginHandler(session_module.BaseSessionHandler):
+	def get(self):
+		if self.session.get('usuarioLogado'):
+			self.response.out.write('''Bienvenido ''' + self.session.get('usuarioLogado'))
+			self.response.write('''<br/><a href="/logout">Logout</a></br> ''')
+			self.response.write('''<iframe  width="100%" height="90" name="login" frameBorder="0" src="/upload" ></iframe>''')
+		else:
+			self.response.out.write('''
+									Use el login para poder subir fotos:<br>
+									<form method="post" >
+									<label for="usuario">Email:</label>
+									<input type="text" name="email" />
+									<label for="password">Password:</label>
+									<input type="password" name="password" />
+									<input type="submit" value="Enviar" />
+									''')
+	def post(self):
+			email = self.request.get("email")
+			password = self.request.get("password")
+			passwordHash = hashlib.md5(password).hexdigest()
+			usuarios = usuario.query(ndb.AND(usuario.email == email, usuario.password == passwordHash))
+			if usuarios.count() > 0 :
+				for cadaUser in usuarios:
+					self.session['usuarioLogado'] = cadaUser.nombre
+					self.session['emailLogado'] = cadaUser.email
+				#self.response.out.write('''<script>window.location="/login";</script> ''')
+				self.response.write('''<script>parent.location.href=parent.location.href</script> ''')
+				
+			else:
+				self.response.out.write('''
+									Use el login para poder subir fotos:<br>
+									<form method="post" >
+									<label for="usuario">Email:</label>
+									<input type="text" name="email" />
+									<label for="password">Password:</label>
+									<input type="password" name="password" />
+									<input type="submit" value="Enviar" /><br/>
+									<span style="color:red;">Email o contrase&ntilde;a inv&aacute;lidos.</span>
+									''')
+
+
+FORM_SUBIR_FOTO="""
+				<html><body>
+				<form action="%(url)s" method="POST" enctype="multipart/form-data">
+				<input type="file" name="file"><br>
+				<input type="radio" name="access" value="public" checked="checked" /> P&uacute;blica
+				<input type="radio" name="access" value="private" /> Privada
+				<input type="submit" name="submit" value="Guardar">
+				</form></body></html>"""
+
+class UploadHandler(session_module.BaseSessionHandler, blobstore_handlers.BlobstoreUploadHandler):
+	def get(self):
+		#Si el usuario se ha autenticado
+		#le mando el formulario
+		if self.session.get('usuarioLogado'):
+			upload_url = blobstore.create_upload_url('/upload')
+			self.response.out.write(FORM_SUBIR_FOTO % {'url':upload_url})
+			#sino le mando a que se autentifique
+    
+	def post(self):
+		#Si el usuario se ha autenticado
+		#proceso el fichero que he recibido en el servidor
+		if self.session.get('usuarioLogado'):
+			upload_files = self.get_uploads('file')
+			blob_info = upload_files[0] # guardo la imagen en el BlobStore
+			img = Imagen(email=self.session.get('emailLogado'), public=self.request.get("access")=="public", blob_key=blob_info.key())
+			img.put() #guardo el objeto Image
+			self.response.write('''<script>parent.parent.location.href=parent.parent.location.href</script> ''')
+			#Dependiendo de la lógica de negocio, le permito que suba otra foto o      bien le mando al menú principal
+
+class ViewHandler(session_module.BaseSessionHandler, blobstore_handlers.BlobstoreDownloadHandler):
+	def get(self):
+		fotosPublicas= Imagen.query(Imagen.public == True)
+		self.response.out.write('''
+								<!DOCTYPE html>
+								<html>
+								<head>
+									<title>HTML5 Photo Gallery</title>
+									<link rel="stylesheet" type="text/css" media="screen" href="http://cdnjs.cloudflare.com/ajax/libs/fancybox/1.3.4/jquery.fancybox-1.3.4.css"/>
+								</head>
+								<body>
+								<!-- STYLE SECTION -->
+
+								<style type="text/css">
+
+								body {
+									font-family: "Aller", "sans-serif";  /* just a custom font */
+								}
+									
+
+								a:-webkit-any-link {
+								  	text-decoration: none;	/* ignoring default link settings */
+								}
+
+
+								ul	
+								{
+									list-style-type: none;	/* hiding the bullets from ul */
+								}
+
+								.fade {
+								   opacity: 0.8;		/* sets default view to a 80% opacity */
+								   transition: opacity .25s ease-in-out;
+								   -moz-transition: opacity .25s ease-in-out;
+								   -webkit-transition: opacity .25s ease-in-out;
+								}
+
+								.fade:hover {
+								      opacity: 1;	/* sets default view to a 100% opacity when on hover state */
+								}
+
+								.img-wrapper {
+									width: 300px;
+									height: 240px;
+									border: 0.1em solid #ccc;
+									border-radius: 0.4em;
+									background-color: #f3f3f3;
+									box-shadow: 0.1em 0.1em 0.5em -0.2em #777;
+									margin: 1em 1em;
+								}
+
+								img {
+									border-radius: 0.4em 0.4em 0em 0em;		/* radius should be the same as the img-wrapper */
+								}
+
+								.gallery-wrapper ul li{				
+									display: inline-block;		/* sit wrappers in rows, not column block */
+
+								}
+
+								h1 {
+									padding-left: 14em;
+								}
+
+								h4 {							/* style the photos titles */
+									text-align: center;
+									font-size: 1em;
+									margin: 0;
+									padding: 0.5em 2em;
+									text-transform: uppercase;
+									font-weight: bold;
+									color: black;
+								}
+
+								.logo {
+									margin-left: 22em;
+									margin-bottom: 4em;
+								}
+
+								</style>
+
+
+								<!-- HTML SECTION -->
+								<div class="gallery-wrapper">	
+								<h1>Galer&iacute;a de Im&aacute;genes</h1>			
+									<ul>
+								''')	
+		if self.session.get('usuarioLogado'):
+			fotosPrivadas = Imagen.query(ndb.AND(Imagen.email == self.session.get('emailLogado'), Imagen.public == False))
+			for fotoPublica in fotosPrivadas:
+				foto= blobstore.BlobInfo.get(str(fotoPublica.blob_key))
+				self.response.out.write('''<li>					
+												<figure class="img-wrapper fade">''')
+				self.response.out.write('''<img width="300" height="200" src="serve/%s"><h4>Privada</h4></figure>	
+											</li>''' % foto.key())
+		for fotoPublica in fotosPublicas:
+			foto= blobstore.BlobInfo.get(str(fotoPublica.blob_key))
+			self.response.out.write('''<li>					
+											<figure class="img-wrapper fade">''')
+			self.response.out.write('''<img width="300" height="200" src="serve/%s"><h4>P&uacute;blica</h4></figure>	
+										</li>''' % foto.key())
+
+
+		self.response.out.write('''	
+									</ul>
+								</div>
+								</body>
+
+								<script
+									  src="https://code.jquery.com/jquery-1.11.0.min.js"
+									  integrity="sha256-spTpc4lvj4dOkKjrGokIrHkJgNA0xMS98Pw9N7ir9oI="
+									  crossorigin="anonymous"></script>
+								<script
+								  src="https://code.jquery.com/jquery-migrate-1.2.1.min.js"
+								  integrity="sha256-HmfY28yh9v2U4HfIXC+0D6HCdWyZI42qjaiCFEJgpo0="
+								  crossorigin="anonymous"></script>
+								<script type="text/javascript" src="https://gist.github.com/runtl/3451937/raw/99135ea2b36f25c495ef318566b1932aca2a7e71/jquery.fancybox-1.3.4.pack.js"></script>	
+
+								<script type="text/javascript">
+								    $(function($){
+								        var addToAll = false;
+								        var gallery = true;
+								        var titlePosition = 'inside';
+								        $(addToAll ? 'img' : 'img.fancybox').each(function(){
+								            var $this = $(this);
+								            var title = $this.attr('title');
+								            var src = $this.attr('data-big') || $this.attr('src');
+								            var a = $('<a href="#" class="fancybox"></a>').attr('href', src).attr('title', title);
+								            $this.wrap(a);
+								        });
+								        if (gallery)
+								            $('a.fancybox').attr('rel', 'fancyboxgallery');
+								        $('a.fancybox').fancybox({
+								            titlePosition: titlePosition
+								        });
+								    });
+								    $.noConflict();
+								</script>
+
+								</html>
+								''')
+		
+
+class ServeHandler(blobstore_handlers.BlobstoreDownloadHandler):
+	def get(self, resource):
+		resource = str(urllib.unquote(resource))
+		blob_info = blobstore.BlobInfo.get(resource)
+		self.send_blob(blob_info)
+
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
@@ -660,4 +1002,10 @@ app = webapp2.WSGIApplication([
     ('/img', Image),
     ('/valemail', EmailHandler),
     ('/datos', Tarea5Handler),
-], debug=True)
+    ('/sesion', Tarea6Handler),
+    ('/logout', LogoutHandler),
+    ('/login', LoginHandler),
+    ('/upload', UploadHandler),
+    ('/download', ViewHandler),
+    ('/serve/([^/]+)?', ServeHandler),
+], config=myconfig_dict, debug=True)
